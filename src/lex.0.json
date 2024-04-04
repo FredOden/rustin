@@ -1,0 +1,8 @@
+{
+	"Number" : "\b((?:0x[0-9a-f]+)|(?:\d*[.]?\d+(?:(?:[E|e][+\-]?)\d*[.]?\d+)?))\b",
+	"Identifier" : "([A-Za-z_][0-9A-Za-z_]*)",
+	";" : ";",
+	"if": "\bif\b",
+	"then" : "\bthen\b",
+	"else" : "\belse\b"
+}
