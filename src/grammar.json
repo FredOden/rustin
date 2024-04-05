@@ -1,0 +1,32 @@
+{
+	"rules" : {
+
+		"variable": {
+			"Identifier":
+			"(p) => p.$(0)"
+			,"Identifier [ &factor ]" :
+			"p => () => p.$(0)() + \"[\" + p.$(2)() + \"]\""
+		}
+
+		,"atom" : {
+			"Number":
+			"(p) => () => Number(p.$(0)())"
+			, "π" : "(p) => () => Math.PI"
+			, "&variable":
+			"(p) => () => { return vars.get(p.$(0)()); }"
+			, "( &factor )":
+			"p => { return p.$(1); }"
+			,"√ &atom":
+			"p => () => L.sqrt(p.$(1)())"
+			,"&atom °":
+			"p => () => p.$(0)()*Math.PI/180"
+			,"&atom ®":
+			"p => () => p.$(0)()*180/Math.PI"
+			,"Math ( &factorA )":
+			"p => () => callMath(p.$(0)(), p.$(2)())"
+			, "Comment":
+			"p => Lourah.utils.text.Parser.NOTHING"
+
+		}
+	}
+}

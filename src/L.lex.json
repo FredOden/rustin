@@ -1,7 +1,7 @@
 
 {
 	"tokens": {
-		"Comment": "(#.*$)"
+		"@Comment": "^.*(\\@.*$)"
 		,"~Identifier" : "([A-Za-z_][0-9A-Za-z_]*)"
 		,"@Number" : "\\b((?:0x[0-9a-f]+)|(?:\\d*[.]?\\d+(?:(?:[E|e][\\+\\-]?)\\d*[.]?\\d+)?))\\b"
 		,"print": "\\b(print)\\b"

@@ -1,11 +1,11 @@
 {
 	"tokens" :{
 		";" : ";",
-		"equals" : "=",
-		"if": "\\bif\\b",
-		"then" : "\\bthen\\b",
-		"else" : "\\belse\\b",
-		"~Number" : "\\b((?:0x[0-9a-f]+)|(?:\\d*[.]?\\d+(?:(?:[E|e][\\+\\-]?)\\d*[.]?\\d+)?))\\b",
-		"~~Identifier" : "([A-Za-z_][0-9A-Za-z_]*)"
+		"@equals" : "=",
+		"@if": "\\bif\\b",
+		"@then" : "\\bthen\\b",
+		"@else" : "\\belse\\b",
+		"@Number" : "\\b((?:0x[0-9a-f]+)|(?:\\d*[.]?\\d+(?:(?:[E|e][\\+\\-]?)\\d*[.]?\\d+)?))\\b",
+		"Identifier" : "([A-Za-z_][0-9A-Za-z_]*)"
 	}
 }
