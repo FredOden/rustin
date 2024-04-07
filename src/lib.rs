@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 
 pub fn line_col(text: String, idx:usize) -> (usize, usize) {
     let (mut line,mut col) = (1,1);

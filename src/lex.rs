@@ -1,10 +1,7 @@
 use regex::Regex;
 use serde::Deserialize;
 
-//mod lib;
-use rustin::line_col;
-
-#[derive(Clone, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct Token {
     token: String,
     string: String,
@@ -39,18 +36,19 @@ struct Lexicon {
 /// returns Result<Vec<Token>, String>
 ///
 /// json description is stored in a BTreeMap
-///
+/// ```
 /// {
 /// "tokens": {
 ///       "token" : "regular expression",
 ///       ...
 ///       }
 /// }
-///
+/// ```
 ///example: 
 ///
+/// ```
 ///{
-	///"tokens" :{
+///       "tokens" :{
 ///		";" : ";",
 ///		"@equals" : "=",
 ///		"@if": "\\bif\\b",
@@ -61,6 +59,7 @@ struct Lexicon {
 ///	}
 ///}
 ///-------- end of file
+/// ```
 ///
 /// issues:
 /// the "general" tokens like identifiers
@@ -72,8 +71,10 @@ struct Lexicon {
 ///
 /// so for a source code like this
 ///-------- begining of file
+/// ```
 ///if zz and e45 then top = 54.6e+6
 ///else if 14;
+/// ```
 ///-------- end of file
 ///
 /// lex will return Ok(tokens) where tokens

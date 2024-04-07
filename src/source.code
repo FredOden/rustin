@@ -1,7 +1,1 @@
-if zz and e45 then top = 54.6e+6
-else {
-b=3
-if b gt 2 {
-     b = √b;
-     }
-};
+if b then c;

@@ -23,6 +23,9 @@ struct Opt {
     /// verbose
     #[structopt(short, long)]
     verbose:bool,
+    /// rule
+    #[structopt(short, long)]
+    rule:String,
 }
 
 fn main() {
@@ -36,7 +39,7 @@ fn main() {
                     if opt.verbose { println!("Lex -> {:#?}", tokens); }
                    println!("Can check syntax");
                    let mut  parser = parser::Parser::new(grammar, tokens);
-                   parser.parse("top".to_string(), "zz".to_string(), 0);
+                   parser.parse("top".to_string(), opt.rule, 0);
                 }
                 Err(e) => {
                     eprintln!("lex failed::{}", e);

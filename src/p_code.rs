@@ -1,6 +1,7 @@
+use serde::Deserialize;
 use crate::lex;
 
-#[derive(Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub enum PCode {
     Nothing(),
     Error(String),
@@ -16,7 +17,7 @@ pub enum PCode {
     Call(String, Vec<Box<Element>>),
 }
 
-#[derive(Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct Element {
     p_code: PCode,
     token: lex::Token

@@ -1,0 +1,141 @@
+{
+	"rules" : {
+
+		"variable": {
+			"~Identifier":
+			"(p) => p.$(0)"
+			,"~Identifier [ &factor ]" :
+			"p => () => p.$(0)() + \"[\" + p.$(2)() + \"]\""
+		}
+
+		,"atom" : {
+			"@Number":
+			"(p) => () => Number(p.$(0)())"
+			, "%" : "(p) => () => Math.PI"
+			, "&variable":
+			"(p) => () => { return vars.get(p.$(0)());}"
+			, "( &factor )":
+			"p => { return p.$(1); }"
+			,"@ &atom":
+			"p => () => L.sqrt(p.$(1)())"
+			,"&atom °":
+			"p => () => p.$(0)()*Math.PI/180"
+			,"&atom ®":
+			"p => () => p.$(0)()*180/Math.PI"
+			,"Math ( &factorA )":
+			"p => () => callMath(p.$(0)(), p.$(2)())"
+			, "~Identifier &callParams":
+			"p => () => { var call = p.$(0)();  var expr = vars.get(call); var callList = p.$(1)(); if (expr.defList === undefined) { throw \"Call::error::\" + call + \" is not a function !\"; } vars = new Scope(vars); expr.defList.forEach((def, i) => { vars.declare(def); vars.set(def, callList[i]?callList[i]:0); }); var r = expr();  vars = vars.getEnclosing(); return r; }"
+
+			, "Comment":
+			"p => Lourah.utils.text.Parser.NOTHING"
+
+		}
+
+		,"factor" : {
+			"&factorL":
+			"p => p.$(0)"
+			,"not &factorL":
+			"p => () => !p.$(1)()"
+		}
+
+		,"factorL" : {
+			"&factorL OperatorL &factorL":
+			"p => () => operate(p.$(1)(), p.$(0)(), p.$(2)())"
+			,"&factorB":
+			"p => p.$(0)"
+		}
+
+
+		,"factorB" : {
+			"&factorB OperatorB &factorB":
+			"p => () => operate(p.$(1)(), p.$(0)(), p.$(2)())"
+			,"&factorA":
+			"p => p.$(0)"
+		}
+
+		,"factorA": {
+			"&factorA OperatorA &factorA":
+			"p => () => operate(p.$(1)(), p.$(0)(), p.$(2)())"
+
+			,"OperatorA &atom":
+			"p => () => operate(p.$(0)(), 0, p.$(1)())"
+
+
+			,"&factorM":
+			"p => p.$(0)"
+		}
+
+		,"factorM": {
+			"&factorM OperatorM &factorM":
+			"p => () => operate(p.$(1)(), p.$(0)(), p.$(2)())"
+			,"&atom":
+			"p => p.$(0)"
+		}
+
+		,"expr" : {
+			"&variable = &expr":
+			"(p) => () => { p2 = p.$(2)(); vars.set(p.$(0)(), p2); p.val = p2; return p2; }"
+			,"&factor ;":
+			"(p) => p.$(0)a"
+			,";":
+			"Lourah.utils.text.Parser.NOTHING"
+			, "print &atom ;":
+			"(p) => () => { console.log(p.$(1)());return p.$(1)(); }"
+			, "if &factor then &expr":
+			"p => () => { if ($N(p.$(1)())) return p.$(3)(); else return Lourah.utils.text.Parser.NOTHING; }"
+			, "if &factor then &expr else &expr":
+			"p => () => $N(p.$(1)())?p.$(3)():p.$(5)()"
+			, "&block":
+			"(p) => p.$(0)"
+			, "for &variable = &factor to &factor &expr":
+			"(p) => () => { var v = p.$(1)(); var from = Number(p.$(3)()); var to = Number(p.$(5)()); if (to <  from) { throw \"for::error::to(\"+to+\") < from(\" + from +\")\";} vars = new Scope(vars); vars.declare(v); for(vars.set(v, from); vars.get(v) <= to; vars.set(v, vars.get(v) + 1)) { p.$(6)(); } vars = vars.getEnclosing(); return p.$(6)(); //Lourah.utils.text.Parser.NOTHING; }"
+			, "for &variable = &factor to &factor step &factor &expr":
+			"(p) => () => { var v = p.$(1)(); var step = Number(p.$(7)()); var from = Number(p.$(3)()); var to = Number(p.$(5)()); if (step === 0) { throw \"for::error::step = \" + step; } vars = new Scope(vars); vars.declare(v); if ((step >0)?(to <  from):(to > from)) { throw \"for::error::to(\"+to+ ((step>0)?\") < from(\":\") > from(\") + from +\")\"; } for(vars.set(v, from); (step>0)?(vars.get(v) <= to):(vars.get(v) >= to); vars.set(v, vars.get(v) + step)) { p.$(8)(); } vars = vars.getEnclosing(); return p.$(8)(); }"
+			,"def ~Identifier &defParams &expr":
+			"p => () => { var def = p.$(1)(); vars.declare(def); var expr = p.$(3); expr.defList = p.$(2)(); vars.set(def, expr); return 0; }"
+		}
+
+		, "defParams" : {
+			"( )":
+			"p => () => []"
+			,"( &defList )":
+			"p => () => p.$(1)()"
+		}
+
+		, "defList" : {
+			"~Identifier":
+			"p => () => { return [ p.$(0)() ]; }"
+			,"~Identifier , &defList":
+			"p => () => { return [ p.$(0)() ].concat(p.$(2)()); }"
+		}
+
+		, "callParams" : {
+			"( )":
+			"p => () => []"
+			,"( &callList )":
+			"p => () => p.$(1)()"
+		}
+
+		, "callList" : {
+			"&factor":
+			"p => () => [ p.$(0)() ]"
+			,"&factor , &callList":
+			"p => () => [ p.$(0)() ].concat(p.$(2)())"
+		}
+
+		, "statement" : {
+			"&expr":
+			"(p) => p.$(0)"
+			, "&expr &statement":
+			"(p) => () => { p.$(0)(); return p.$(1)(); }"
+		}
+
+		, "block" : {
+			"{ &statement }":
+			"(p) => p.$(1)"
+		}
+
+	}
+}
+
