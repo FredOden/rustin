@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::cmp::Ordering;
 use crate::p_code;
 use std::cell::RefCell;
+use std::option::Option;
 
 
 #[derive(Deserialize, Clone, Debug)]
@@ -28,8 +29,28 @@ impl ForbiddenRule {
             at: RefCell::new(Vec::new())
         }
     }
-    pub fn add(&self, it:usize) {
+    pub fn add_at(&self, it:usize) {
         self.at.borrow_mut().push(it);
+    }
+
+    pub fn is_at(&self, at:usize) -> bool {
+        for it in self.at.borrow().iter() {
+            if it.cmp(&at) == Ordering::Equal {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    pub fn remove_at(&self, at:usize) {
+        let mut i:usize = 0;
+        for it in self.at.borrow().iter() {
+            if it.cmp(&at) == Ordering::Equal {
+                break;
+            }
+            i += 1;
+        }
+        self.at.borrow_mut().remove(i);
     }
 }
 
@@ -39,7 +60,8 @@ pub struct Parser {
     grammar_json: String,
     grammar: Grammar,
     keys: std::collections::HashMap<String, Vec<String>>,
-    forbidden_rules: Vec<ForbiddenRule> //HashMap<String, Vec<usize>>,
+    forbidden_rules: Vec<ForbiddenRule>, //HashMap<String, Vec<usize>>,
+    depth:RefCell<usize>,
 }
 
 impl Parser {
@@ -60,6 +82,7 @@ impl Parser {
             grammar:grammar,
             keys: HashMap::new(),
             forbidden_rules : Vec::new(),
+            depth:RefCell::new(0),
         };
 
         //println!("grammar::{:#?}", p.grammar);
@@ -70,7 +93,7 @@ impl Parser {
                 let mut vat: Vec<usize> = Vec::new();
                 p.forbidden_rules.push(
                     ForbiddenRule::new((*i).to_string())
-                    );
+                );
             }
             r.sort_by(|a,b| b.split(" ").count().cmp(&a.split(" ").count()));
             p.keys.insert((*k.clone()).to_string(), r);
@@ -80,76 +103,108 @@ impl Parser {
         p
     }
 
-    pub fn parse(&self, rule: String, name: String, mut atStart:usize) -> bool{
+    fn inc_depth(&self) {
+        *self.depth.borrow_mut() += 1;
+    }
 
-        println!("in parse {} at {}", name, atStart);
+    fn dec_depth(&self) {
+        *self.depth.borrow_mut() -= 1;
+        println!("<<<<<<<{}", self.depth());
+    }
+
+    fn depth(&self) -> usize {
+        *self.depth.borrow()
+    }
+
+    fn find_forbidden(&self, rule: &String) -> Option<&ForbiddenRule> {
+        for fr in self.forbidden_rules.iter() {
+            if fr.rule.cmp(&rule) == Ordering::Equal {
+                return Some(fr);
+            }
+        }
+        return None;
+    }
+
+    pub fn parse(&self, rule: String, name: String, mut at:usize) -> usize {
+
+        self.inc_depth();
+        println!("{}::in parse \"{}\" at {}", self.depth(), name, at);
 
         let mut binding = self.keys.get(&name);
         let mut vok = binding.iter_mut();
-        'mainLoop: for tryRules in vok {
-            'rulesLoop: for tryRule in tryRules.iter() {
-
-                for i in 0..self.forbidden_rules.len() {
-                    let mut fr = &self.forbidden_rules[i];
-                    if fr.rule.cmp(&tryRule) == Ordering::Equal {
-                        for fat in fr.at.borrow().iter() {
-                            if fat.cmp(&& mut atStart) == Ordering::Equal {
-                                println!("::::: {} forbidden at {} leaving ...", tryRule, fat);
-                                //continue 'rulesLoop;
-                                return false;
-                            }
-                        }
-                        fr.add(atStart);
+        //println!("{}::vok::{:#?}", self.depth(), vok);
+        'mainLoop: for try_rules in vok {
+            //println!("{}::try_rules::{:#?}", self.depth(), try_rules);
+            'rulesLoop: for try_rule in try_rules.iter() {
+                if let Some(fr) = self.find_forbidden(try_rule) {
+                    if fr.is_at(at) {
+                        println!("{}::@@@@ {try_rule} forbidden at {at}", self.depth());
+                        continue;
                     }
                 }
 
-                let syntax = tryRule.split(" ");
-                let count = syntax.clone().count();
-                let mut at = atStart;
-                let mut iElement:usize = 0;
-                for element in syntax {
-                    //println!(" element[{}]::{}", iElement, element);
 
-                    /*println!("token[{}]::{} (\"{}\") -- element[{}]::{}",
-                        at + iElement,
-                        self.tokens[at + iElement].token(),
-                        self.tokens[at + iElement].string(),
-                        iElement,
-                        element,
-                        );
-                    */
-                    if self.tokens[at + iElement].token().cmp(&element.to_string()) == Ordering::Equal {
-                        println!("  >>>>>>skip {}", element);
-                        iElement += 1;
-                        if iElement == count { 
-                            println!("!!!!!!!! MATCHED {}", tryRule);
-                            return true; 
-                        }
+                let syntax = try_rule.split(" ");
+                let count = syntax.clone().count();
+                println!("{}:: try_rule {} :: {}",
+                    self.depth(),
+                    try_rule,
+                    count
+                );
+                let mut i_element:usize = 0;
+                if at + count -1 >= self.tokens.len() {
+                        println!("{}:: @@@@ END OF TOKENS rule too long", self.depth());
                         continue;
-                    }
-                    if element[0..1].cmp("&") == Ordering::Equal {
-                        let r = &element[1..];
-                        println!("      ......will go in {}/{}", r, name);
-                        if name.cmp(&r.to_string()) != Ordering::Equal || atStart != (at + iElement) {
-                            if self.parse(rule.clone(), r.to_string(), at + iElement) {
-                                iElement += 1;
-                                if iElement == count {
-                                    println!("******** MATCHED {}", tryRule);
-                                    return true;
-                                }
-                                continue;
-                            }
-                        } else {
-                            continue 'rulesLoop;
-                        }
-                    } else {
+                }
+                'syntax: for element in syntax {
+                    if at + i_element >= self.tokens.len() {
+                        println!("{}:: @@@@ END OF TOKENS", self.depth());
                         continue 'rulesLoop;
                     }
-                    iElement += 1;
+                    println!("{}:: syntax[{i_element}] {element}", self.depth());
+                    if self.tokens[at + i_element].token().cmp(&element.to_string()) == Ordering::Equal {
+                        if i_element == count - 1 {
+                            println!("{}::Matched {try_rule}", self.depth());
+
+                            self.dec_depth();
+                            return at + count;
+                        }
+                        i_element += 1;
+                        continue 'syntax;
+                    } else {
+                        if element[0..1].cmp("&") == Ordering::Equal {
+                            let sub_rule = &element[1..];
+                            if let Some(fr) = self.find_forbidden(try_rule) {
+                                fr.add_at(at + i_element);
+                            }
+                            let skip = self.parse("".to_string(), sub_rule.to_string(), at + i_element);
+                            if let Some(fr) = self.find_forbidden(try_rule) {
+                                fr.remove_at(at + i_element);
+                            }
+
+                            if skip > 0 {
+                                at = skip - 1 -i_element;
+                                if i_element == count - 1 {
+                                    println!("{}::Matched {try_rule} &", self.depth());
+
+                                    self.dec_depth();
+                                    return at +count ;
+                                }
+                                i_element += 1;
+                                continue 'syntax
+                            }
+                            continue 'rulesLoop;
+                        }
+                        // here element not matched
+                        // process next rule
+                        continue 'rulesLoop
+                    }
+                    continue 'rulesLoop
                 }
             }
         }
-        return false;
+        self.dec_depth();
+        return 0;
     }
 
 }

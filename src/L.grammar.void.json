@@ -18,9 +18,9 @@
 			"p => { return p.$(1); }"
 			,"@ &atom":
 			"p => () => L.sqrt(p.$(1)())"
-			,"&atom °":
+			,"&atom @":
 			"p => () => p.$(0)()*Math.PI/180"
-			,"&atom ®":
+			,"&atom %":
 			"p => () => p.$(0)()*180/Math.PI"
 			,"Math ( &factorA )":
 			"p => () => callMath(p.$(0)(), p.$(2)())"
