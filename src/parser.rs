@@ -6,6 +6,10 @@ use crate::p_code;
 use std::cell::RefCell;
 use std::option::Option;
 
+#[derive(Eq, Hash, PartialEq, Debug)]
+pub enum CacheKey {
+    K(String, usize),
+}
 
 #[derive(Deserialize, Clone, Debug)]
 struct Grammar {
@@ -62,6 +66,7 @@ pub struct Parser {
     keys: std::collections::HashMap<String, Vec<String>>,
     forbidden_rules: Vec<ForbiddenRule>, //HashMap<String, Vec<usize>>,
     depth:RefCell<usize>,
+    cache:RefCell<HashMap<CacheKey, usize>>,
 }
 
 impl Parser {
@@ -83,6 +88,7 @@ impl Parser {
             keys: HashMap::new(),
             forbidden_rules : Vec::new(),
             depth:RefCell::new(0),
+            cache:RefCell::new(HashMap::new()),
         };
 
         //println!("grammar::{:#?}", p.grammar);
@@ -116,6 +122,28 @@ impl Parser {
         *self.depth.borrow()
     }
 
+    fn insert_cache(&self, try_rule:&String, at:usize, skip:usize) {
+        self.cache.borrow_mut().insert(
+            CacheKey::K(try_rule.clone(), at),
+            skip,
+        );
+    }
+
+    fn find_cache(&self, try_rule: &String, at:usize) -> Option<usize> {
+       match self.cache.borrow().get(
+             &CacheKey::K(try_rule.clone(), at)
+             ) {
+           Some(pu) => {
+               return Some(*pu);
+           }
+           None => {
+               return None;
+           }
+       }
+       return None;
+    }
+
+
     fn find_forbidden(&self, rule: &String) -> Option<&ForbiddenRule> {
         for fr in self.forbidden_rules.iter() {
             if fr.rule.cmp(&rule) == Ordering::Equal {
@@ -136,6 +164,12 @@ impl Parser {
         'mainLoop: for try_rules in vok {
             //println!("{}::try_rules::{:#?}", self.depth(), try_rules);
             'rulesLoop: for try_rule in try_rules.iter() {
+                if let Some(s) = self.find_cache(try_rule, at) {
+                    println!("{}::@@@@ Cached rule {try_rule} at {at} -> {s}", self.depth());
+
+                    self.dec_depth();
+                    return s;
+                }
                 if let Some(fr) = self.find_forbidden(try_rule) {
                     if fr.is_at(at) {
                         println!("{}::@@@@ {try_rule} forbidden at {at}", self.depth());
@@ -153,7 +187,7 @@ impl Parser {
                 );
                 let mut i_element:usize = 0;
                 if at + count -1 >= self.tokens.len() {
-                        println!("{}:: @@@@ END OF TOKENS rule too long", self.depth());
+                        println!("{}:: @@@@ END OF TOKENS rule <{try_rule}> too long", self.depth());
                         continue;
                 }
                 'syntax: for element in syntax {
@@ -164,7 +198,7 @@ impl Parser {
                     println!("{}:: syntax[{i_element}] {element}", self.depth());
                     if self.tokens[at + i_element].token().cmp(&element.to_string()) == Ordering::Equal {
                         if i_element == count - 1 {
-                            println!("{}::Matched {try_rule}", self.depth());
+                            println!("{}::@@@@ Matched {try_rule}", self.depth());
 
                             self.dec_depth();
                             return at + count;
@@ -178,6 +212,8 @@ impl Parser {
                                 fr.add_at(at + i_element);
                             }
                             let skip = self.parse("".to_string(), sub_rule.to_string(), at + i_element);
+                            self.insert_cache(try_rule, at, skip);
+                            
                             if let Some(fr) = self.find_forbidden(try_rule) {
                                 fr.remove_at(at + i_element);
                             }
@@ -185,7 +221,7 @@ impl Parser {
                             if skip > 0 {
                                 at = skip - 1 -i_element;
                                 if i_element == count - 1 {
-                                    println!("{}::Matched {try_rule} &", self.depth());
+                                    println!("{}::@@@@ Matched {try_rule} &", self.depth());
 
                                     self.dec_depth();
                                     return at +count ;

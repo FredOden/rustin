@@ -1,1 +1,3 @@
-if true then {√ 9999;}
+a = 32;
+if a eq √6667 then 7777; else 8888;
+;
