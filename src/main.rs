@@ -34,12 +34,14 @@ fn main() {
             let json = fs::read_to_string(opt.lexicon).unwrap();
             let source = fs::read_to_string(opt.source).unwrap();
             let grammar = fs::read_to_string(opt.grammar).unwrap();
+            let mut next:std::option::Option<parser::Parsed>;
             match lex::lex(json, source) {
                 Ok(tokens) => {
                     if opt.verbose { println!("Lex -> {:#?}", tokens); }
                    println!("Can check syntax");
                    let mut  parser = parser::Parser::new(grammar, tokens);
-                   parser.parse("top".to_string(), opt.rule, 0);
+                   next = parser.parse("top".to_string(), opt.rule, 0);
+                   println!("END PARSING AT::{:#?}", next);
                 }
                 Err(e) => {
                     eprintln!("lex failed::{}", e);

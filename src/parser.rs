@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::cmp::Ordering;
 use crate::p_code;
 use std::cell::RefCell;
+use std::rc::Rc;
 use std::option::Option;
 
 #[derive(Eq, Hash, PartialEq, Debug)]
@@ -58,6 +59,24 @@ impl ForbiddenRule {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct Parsed {
+    at: usize,
+    count: usize,
+    broken: bool,
+    // that's all for the moment
+}
+
+impl Parsed {
+    fn new(at:usize, count:usize) -> Parsed {
+        Parsed {
+            at,
+            count,
+            broken: false,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Parser {
     tokens:Vec<lex::Token>,
@@ -66,7 +85,7 @@ pub struct Parser {
     keys: std::collections::HashMap<String, Vec<String>>,
     forbidden_rules: Vec<ForbiddenRule>, //HashMap<String, Vec<usize>>,
     depth:RefCell<usize>,
-    cache:RefCell<HashMap<CacheKey, usize>>,
+    cache:RefCell<HashMap<CacheKey, Option<Parsed>>>,
 }
 
 impl Parser {
@@ -115,32 +134,45 @@ impl Parser {
 
     fn dec_depth(&self) {
         *self.depth.borrow_mut() -= 1;
-        println!("<<<<<<<{}", self.depth());
+        //println!("<<<<<<<{}", self.depth());
     }
 
     fn depth(&self) -> usize {
         *self.depth.borrow()
     }
 
-    fn insert_cache(&self, try_rule:&String, at:usize, skip:usize) {
+    fn insert_cache(&self, try_rule:&String, at:usize, opt_parsed:Option<Parsed>) {
         self.cache.borrow_mut().insert(
             CacheKey::K(try_rule.clone(), at),
-            skip,
+            opt_parsed,
         );
     }
 
-    fn find_cache(&self, try_rule: &String, at:usize) -> Option<usize> {
-       match self.cache.borrow().get(
-             &CacheKey::K(try_rule.clone(), at)
-             ) {
-           Some(pu) => {
-               return Some(*pu);
-           }
-           None => {
-               return None;
-           }
-       }
-       return None;
+    fn find_cache(&self, try_rule: &String, at:usize) -> Option<Parsed> {
+        match &self.cache.borrow().get(
+            &CacheKey::K(try_rule.clone(), at)
+        )
+        {
+            Some(x) => {
+                return **x;
+            }
+            None => {
+                return None;
+            }
+        }
+    }
+
+    fn is_broken(&self, try_rule : &String, at:usize) -> bool {
+        if let Some(p) = self.find_cache(try_rule, at) {
+            return p.broken;
+        }
+        return false;
+    }
+
+    fn set_broken(&self, try_rule : &String, at:usize) {
+        if let Some(mut p) = self.find_cache(try_rule, at) {
+            p.broken = true;
+        }
     }
 
 
@@ -153,94 +185,99 @@ impl Parser {
         return None;
     }
 
-    pub fn parse(&self, rule: String, name: String, mut at:usize) -> usize {
+    pub fn parse(&self, rule: String, name: String, at_start:usize) -> Option<Parsed> {
 
         self.inc_depth();
-        println!("{}::in parse \"{}\" at {}", self.depth(), name, at);
+        println!("{}::in parse \"{}\" at {}", self.depth(), name, at_start);
 
         let mut binding = self.keys.get(&name);
         let mut vok = binding.iter_mut();
-        //println!("{}::vok::{:#?}", self.depth(), vok);
         'mainLoop: for try_rules in vok {
-            //println!("{}::try_rules::{:#?}", self.depth(), try_rules);
             'rulesLoop: for try_rule in try_rules.iter() {
-                if let Some(s) = self.find_cache(try_rule, at) {
-                    println!("{}::@@@@ Cached rule {try_rule} at {at} -> {s}", self.depth());
 
-                    self.dec_depth();
-                    return s;
-                }
                 if let Some(fr) = self.find_forbidden(try_rule) {
-                    if fr.is_at(at) {
-                        println!("{}::@@@@ {try_rule} forbidden at {at}", self.depth());
+                    if fr.is_at(at_start) {
+                        println!("{}::@@@@ {try_rule} forbidden at {at_start}", self.depth());
                         continue;
                     }
                 }
 
-
-                let syntax = try_rule.split(" ");
-                let count = syntax.clone().count();
-                println!("{}:: try_rule {} :: {}",
-                    self.depth(),
-                    try_rule,
-                    count
-                );
-                let mut i_element:usize = 0;
-                if at + count -1 >= self.tokens.len() {
-                        println!("{}:: @@@@ END OF TOKENS rule <{try_rule}> too long", self.depth());
-                        continue;
+                if self.is_broken(try_rule, at_start) {
+                    println!("{}:: @@@@ {try_rule} BROKEN at {at_start}", self.depth());
+                    continue;
                 }
-                'syntax: for element in syntax {
+
+                if let Some(s) = self.find_cache(try_rule, at_start) {
+                    println!("{}::@@@@ Cached rule {try_rule} at {at_start} -> {s:#?}", self.depth());
+                    self.dec_depth();
+                    return Some(s);
+                }
+
+                let s_syntax = try_rule.split(" ");
+
+                let mut syntax:Vec<String> = Vec::new();
+                for s in s_syntax {
+                    syntax.push(s.to_string());
+                }
+
+                let count = syntax.len();
+                println!("{}:: try_rule {try_rule} :: {count} at {at_start}", self.depth(),);
+                if at_start + count -1 >= self.tokens.len() {
+                    println!("{}:: @@@@ END OF TOKENS rule <{try_rule}> too long", self.depth());
+                    continue;
+                }
+                let mut at = at_start;
+                'syntax: for i_element in 0..syntax.len() {
+                    let element:String = syntax[i_element].clone();
                     if at + i_element >= self.tokens.len() {
                         println!("{}:: @@@@ END OF TOKENS", self.depth());
                         continue 'rulesLoop;
                     }
-                    println!("{}:: syntax[{i_element}] {element}", self.depth());
-                    if self.tokens[at + i_element].token().cmp(&element.to_string()) == Ordering::Equal {
-                        if i_element == count - 1 {
-                            println!("{}::@@@@ Matched {try_rule}", self.depth());
-
-                            self.dec_depth();
-                            return at + count;
-                        }
-                        i_element += 1;
-                        continue 'syntax;
-                    } else {
+                    println!("{}:: syntax[{i_element}] {element} <- {}[{}]", self.depth(), self.tokens[at + i_element].string(), at + i_element);
+                    if self.tokens[at + i_element].token().cmp(&element) != Ordering::Equal {
                         if element[0..1].cmp("&") == Ordering::Equal {
                             let sub_rule = &element[1..];
                             if let Some(fr) = self.find_forbidden(try_rule) {
                                 fr.add_at(at + i_element);
                             }
-                            let skip = self.parse("".to_string(), sub_rule.to_string(), at + i_element);
-                            self.insert_cache(try_rule, at, skip);
-                            
+                            let mut  opt_parsed = self.parse("".to_string(), sub_rule.to_string(), at + i_element);
+                            println!("{}: @@@@ opt_parsed :{opt_parsed:?} {sub_rule} {at} {i_element}", self.depth());
                             if let Some(fr) = self.find_forbidden(try_rule) {
                                 fr.remove_at(at + i_element);
                             }
-
-                            if skip > 0 {
-                                at = skip - 1 -i_element;
-                                if i_element == count - 1 {
-                                    println!("{}::@@@@ Matched {try_rule} &", self.depth());
-
-                                    self.dec_depth();
-                                    return at +count ;
-                                }
-                                i_element += 1;
-                                continue 'syntax
+                            if let  Some(parsed) =  opt_parsed {
+                                let at_before = at;
+                                at = parsed.at + parsed.count -1 - i_element;
+                                println!("{}::@@@@ Partial Match {try_rule}[{i_element}]<{element}> & before {}<{}> now at {}<{}>", self.depth(), at_before +i_element, self.tokens[at_before + i_element].string(), at + i_element, self.tokens[at + i_element].string());
+                                //continue 'syntax;
+                            } else {
+                                println!("{}::@@@@ Break {try_rule} & at {} on {}::{} {i_element}/{count}", self.depth(), at, element, i_element);
+                                self.set_broken(try_rule, at_start);
+                                break 'syntax;
                             }
-                            continue 'rulesLoop;
+                            //continue 'syntax;
+                        } else {
+                            // here element not matched
+                            // process next rule
+                            println!("{}::@@@@ Breaking {try_rule} & at {} on {}::{} {i_element}/{count}'", self.depth(), at, element, i_element);
+                            self.set_broken(try_rule, at_start);
+                            break 'syntax;
                         }
-                        // here element not matched
-                        // process next rule
-                        continue 'rulesLoop
+                        println!("{}::grey zone {try_rule} {i_element} {at}", self.depth());
                     }
-                    continue 'rulesLoop
+                    // store p_code for simpke token
+                    if i_element == count - 1 {
+                        println!("{}::@@@@ Matched {try_rule} {i_element} & at {}", self.depth(), at + i_element );
+                        let mut op = Some(Parsed::new(at, count));
+                        self.insert_cache(try_rule, at_start, op);
+                        self.dec_depth();
+                        return op;
+                    }
                 }
             }
         }
         self.dec_depth();
-        return 0;
+        return None;
     }
 
 }

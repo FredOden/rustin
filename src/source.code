@@ -1,3 +1,2 @@
-a = 32;
-if a eq √6667 then 7777; else 8888;
-;
+if a eq 45 then {8888;} ;
+o=sin(b);
