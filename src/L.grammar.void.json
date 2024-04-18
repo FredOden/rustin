@@ -129,6 +129,8 @@
 			"(p) => p.$(0)"
 			, "&expr &statement":
 			"(p) => () => { p.$(0)(); return p.$(1)(); }"
+			, "&expr &statement &statement":
+			"(p) => () => { p.$(0)(); return p.$(1)(); }"
 		}
 
 		, "block" : {

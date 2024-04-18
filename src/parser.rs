@@ -86,6 +86,7 @@ pub struct Parser {
     forbidden_rules: Vec<ForbiddenRule>, //HashMap<String, Vec<usize>>,
     depth:RefCell<usize>,
     cache:RefCell<HashMap<CacheKey, Option<Parsed>>>,
+    broken:RefCell<HashMap<CacheKey, bool>>,
 }
 
 impl Parser {
@@ -108,6 +109,7 @@ impl Parser {
             forbidden_rules : Vec::new(),
             depth:RefCell::new(0),
             cache:RefCell::new(HashMap::new()),
+            broken:RefCell::new(HashMap::new()),
         };
 
         //println!("grammar::{:#?}", p.grammar);
@@ -163,16 +165,23 @@ impl Parser {
     }
 
     fn is_broken(&self, try_rule : &String, at:usize) -> bool {
-        if let Some(p) = self.find_cache(try_rule, at) {
-            return p.broken;
+        match self.broken.borrow().get(
+            &CacheKey::K(try_rule.clone(), at)
+        ) {
+            Some(b) => {
+                return *b;
+            }
+            None => {
+                return false;
+            }
         }
-        return false;
     }
 
     fn set_broken(&self, try_rule : &String, at:usize) {
-        if let Some(mut p) = self.find_cache(try_rule, at) {
-            p.broken = true;
-        }
+        self.broken.borrow_mut().insert(
+            CacheKey::K(try_rule.clone(), at),
+            true,
+        );
     }
 
 
@@ -197,18 +206,18 @@ impl Parser {
 
                 if let Some(fr) = self.find_forbidden(try_rule) {
                     if fr.is_at(at_start) {
-                        println!("{}::@@@@ {try_rule} forbidden at {at_start}", self.depth());
+                        //println!("{}::@@@@ {try_rule} forbidden at {at_start}", self.depth());
                         continue;
                     }
                 }
 
                 if self.is_broken(try_rule, at_start) {
-                    println!("{}:: @@@@ {try_rule} BROKEN at {at_start}", self.depth());
+                    //println!("{}:: @@@@ {try_rule} BROKEN at {at_start}", self.depth());
                     continue;
                 }
 
                 if let Some(s) = self.find_cache(try_rule, at_start) {
-                    println!("{}::@@@@ Cached rule {try_rule} at {at_start} -> {s:#?}", self.depth());
+                    //println!("{}::@@@@ find_cached rule {try_rule} at {at_start} -> {s:?}", self.depth());
                     self.dec_depth();
                     return Some(s);
                 }
@@ -233,7 +242,7 @@ impl Parser {
                         println!("{}:: @@@@ END OF TOKENS", self.depth());
                         continue 'rulesLoop;
                     }
-                    println!("{}:: syntax[{i_element}] {element} <- {}[{}]", self.depth(), self.tokens[at + i_element].string(), at + i_element);
+                    println!("{}:: syntax[{i_element}] {element} <- \"{}\"[{}]", self.depth(), self.tokens[at + i_element].string(), at + i_element);
                     if self.tokens[at + i_element].token().cmp(&element) != Ordering::Equal {
                         if element[0..1].cmp("&") == Ordering::Equal {
                             let sub_rule = &element[1..];
@@ -251,7 +260,7 @@ impl Parser {
                                 println!("{}::@@@@ Partial Match {try_rule}[{i_element}]<{element}> & before {}<{}> now at {}<{}>", self.depth(), at_before +i_element, self.tokens[at_before + i_element].string(), at + i_element, self.tokens[at + i_element].string());
                                 //continue 'syntax;
                             } else {
-                                println!("{}::@@@@ Break {try_rule} & at {} on {}::{} {i_element}/{count}", self.depth(), at, element, i_element);
+                                //println!("{}::@@@@ Break {try_rule} & at {} on {}::{} {i_element}/{count}", self.depth(), at, element, i_element);
                                 self.set_broken(try_rule, at_start);
                                 break 'syntax;
                             }
@@ -259,7 +268,7 @@ impl Parser {
                         } else {
                             // here element not matched
                             // process next rule
-                            println!("{}::@@@@ Breaking {try_rule} & at {} on {}::{} {i_element}/{count}'", self.depth(), at, element, i_element);
+                            //println!("{}::@@@@ Breaking {try_rule} & at {} on {}::{} {i_element}/{count}'", self.depth(), at, element, i_element);
                             self.set_broken(try_rule, at_start);
                             break 'syntax;
                         }
@@ -274,6 +283,7 @@ impl Parser {
                         return op;
                     }
                 }
+                self.insert_cache(try_rule, at_start, None);
             }
         }
         self.dec_depth();
