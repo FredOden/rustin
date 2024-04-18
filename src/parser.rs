@@ -112,7 +112,6 @@ impl Parser {
             broken:RefCell::new(HashMap::new()),
         };
 
-        //println!("grammar::{:#?}", p.grammar);
         for(k, v) in &p.grammar.rules {
             let mut r: Vec<String> = Vec::new();
             for i in v.keys() {
@@ -125,8 +124,6 @@ impl Parser {
             r.sort_by(|a,b| b.split(" ").count().cmp(&a.split(" ").count()));
             p.keys.insert((*k.clone()).to_string(), r);
         }
-        // println!("keys :: {:#?}", p.keys);
-        //println!("forbidden_rules :: {:#?}", p.forbidden_rules);
         p
     }
 
@@ -136,7 +133,6 @@ impl Parser {
 
     fn dec_depth(&self) {
         *self.depth.borrow_mut() -= 1;
-        //println!("<<<<<<<{}", self.depth());
     }
 
     fn depth(&self) -> usize {
@@ -197,7 +193,6 @@ impl Parser {
     pub fn parse(&self, rule: String, name: String, at_start:usize) -> Option<Parsed> {
 
         self.inc_depth();
-        println!("{}::in parse \"{}\" at {}", self.depth(), name, at_start);
 
         let mut binding = self.keys.get(&name);
         let mut vok = binding.iter_mut();
@@ -206,18 +201,15 @@ impl Parser {
 
                 if let Some(fr) = self.find_forbidden(try_rule) {
                     if fr.is_at(at_start) {
-                        //println!("{}::@@@@ {try_rule} forbidden at {at_start}", self.depth());
                         continue;
                     }
                 }
 
                 if self.is_broken(try_rule, at_start) {
-                    //println!("{}:: @@@@ {try_rule} BROKEN at {at_start}", self.depth());
                     continue;
                 }
 
                 if let Some(s) = self.find_cache(try_rule, at_start) {
-                    //println!("{}::@@@@ find_cached rule {try_rule} at {at_start} -> {s:?}", self.depth());
                     self.dec_depth();
                     return Some(s);
                 }
@@ -230,19 +222,15 @@ impl Parser {
                 }
 
                 let count = syntax.len();
-                println!("{}:: try_rule {try_rule} :: {count} at {at_start}", self.depth(),);
                 if at_start + count -1 >= self.tokens.len() {
-                    println!("{}:: @@@@ END OF TOKENS rule <{try_rule}> too long", self.depth());
                     continue;
                 }
                 let mut at = at_start;
                 'syntax: for i_element in 0..syntax.len() {
                     let element:String = syntax[i_element].clone();
                     if at + i_element >= self.tokens.len() {
-                        println!("{}:: @@@@ END OF TOKENS", self.depth());
                         continue 'rulesLoop;
                     }
-                    println!("{}:: syntax[{i_element}] {element} <- \"{}\"[{}]", self.depth(), self.tokens[at + i_element].string(), at + i_element);
                     if self.tokens[at + i_element].token().cmp(&element) != Ordering::Equal {
                         if element[0..1].cmp("&") == Ordering::Equal {
                             let sub_rule = &element[1..];
@@ -250,29 +238,22 @@ impl Parser {
                                 fr.add_at(at + i_element);
                             }
                             let mut  opt_parsed = self.parse("".to_string(), sub_rule.to_string(), at + i_element);
-                            println!("{}: @@@@ opt_parsed :{opt_parsed:?} {sub_rule} {at} {i_element}", self.depth());
                             if let Some(fr) = self.find_forbidden(try_rule) {
                                 fr.remove_at(at + i_element);
                             }
                             if let  Some(parsed) =  opt_parsed {
                                 let at_before = at;
                                 at = parsed.at + parsed.count -1 - i_element;
-                                println!("{}::@@@@ Partial Match {try_rule}[{i_element}]<{element}> & before {}<{}> now at {}<{}>", self.depth(), at_before +i_element, self.tokens[at_before + i_element].string(), at + i_element, self.tokens[at + i_element].string());
-                                //continue 'syntax;
                             } else {
-                                //println!("{}::@@@@ Break {try_rule} & at {} on {}::{} {i_element}/{count}", self.depth(), at, element, i_element);
                                 self.set_broken(try_rule, at_start);
                                 break 'syntax;
                             }
-                            //continue 'syntax;
                         } else {
                             // here element not matched
                             // process next rule
-                            //println!("{}::@@@@ Breaking {try_rule} & at {} on {}::{} {i_element}/{count}'", self.depth(), at, element, i_element);
                             self.set_broken(try_rule, at_start);
                             break 'syntax;
                         }
-                        println!("{}::grey zone {try_rule} {i_element} {at}", self.depth());
                     }
                     // store p_code for simpke token
                     if i_element == count - 1 {

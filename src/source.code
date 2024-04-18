@@ -1,5 +1,5 @@
 print sin(b);
-if a eq 45 then {cos(8888);} ;
+if a eq 45 then {cos(8888);} 
 y=9;
 print w;
 for i = 1 to 90 print i;
