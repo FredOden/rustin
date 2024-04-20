@@ -1,4 +1,5 @@
 print sin(b);
+def f(x) x*x;
 if a eq 45 then {cos(8888);} 
 y=9;
 print w;

@@ -2,7 +2,6 @@ use crate::lex;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::cmp::Ordering;
-use crate::p_code;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::option::Option;
@@ -59,20 +58,22 @@ impl ForbiddenRule {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct Parsed {
-    at: usize,
+    pub at: usize,
     count: usize,
-    broken: bool,
     // that's all for the moment
+    pub p__: Vec<Parsed>,
+    pub val: String
 }
 
 impl Parsed {
-    fn new(at:usize, count:usize) -> Parsed {
+    fn new(at:usize, count:usize, p__: Vec<Parsed>, val:String) -> Parsed {
         Parsed {
             at,
             count,
-            broken: false,
+            p__,
+            val,
         }
     }
 }
@@ -152,7 +153,18 @@ impl Parser {
         )
         {
             Some(x) => {
-                return **x;
+                let op =  *x;
+                match op {
+                    None => { return None; }
+                    Some(p) => {
+                        return Some(Parsed {
+                            at: p.at,
+                            count: p.count,
+                            p__: p.p__.clone(),
+                            val: p.val.clone(),
+                        });
+                    }
+                }
             }
             None => {
                 return None;
@@ -226,6 +238,7 @@ impl Parser {
                     continue;
                 }
                 let mut at = at_start;
+                let mut p__:Vec<Parsed> = Vec::new();
                 'syntax: for i_element in 0..syntax.len() {
                     let element:String = syntax[i_element].clone();
                     if at + i_element >= self.tokens.len() {
@@ -244,6 +257,7 @@ impl Parser {
                             if let  Some(parsed) =  opt_parsed {
                                 let at_before = at;
                                 at = parsed.at + parsed.count -1 - i_element;
+                                p__.push(parsed);
                             } else {
                                 self.set_broken(try_rule, at_start);
                                 break 'syntax;
@@ -254,12 +268,20 @@ impl Parser {
                             self.set_broken(try_rule, at_start);
                             break 'syntax;
                         }
+                    } else {
+                        p__.push(Parsed{
+                            at: at + i_element,
+                            count: 1,
+                            p__: Vec::new(),
+                            val: self.tokens[at + i_element].string().clone(),
+                        });
                     }
                     // store p_code for simpke token
                     if i_element == count - 1 {
-                        println!("{}::@@@@ Matched {try_rule} {i_element} & at {}", self.depth(), at + i_element );
-                        let mut op = Some(Parsed::new(at, count));
-                        self.insert_cache(try_rule, at_start, op);
+                        let val = self.grammar.rules.get(&name).unwrap().get(try_rule).unwrap().to_string();//"###val###".to_string();
+                        //println!("{}::@@@@ Matched {try_rule} {i_element} & at {} ==> {val}", self.depth(), at + i_element );
+                        let mut op = Some(Parsed{at, count, p__, val});
+                        self.insert_cache(try_rule, at_start, op.clone());
                         self.dec_depth();
                         return op;
                     }

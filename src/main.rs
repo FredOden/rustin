@@ -3,8 +3,8 @@ use structopt::StructOpt;
 use std::path::PathBuf;
 
 mod lex;
-mod p_code;
 mod parser;
+mod compiler;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "rustin")]
@@ -20,6 +20,9 @@ struct Opt {
     /// source code
     #[structopt(short, long)]
     source:PathBuf,
+    /// output compiled code
+    #[structopt(short, long)]
+    output:PathBuf,
     /// verbose
     #[structopt(short, long)]
     verbose:bool,
@@ -41,7 +44,13 @@ fn main() {
                    println!("Can check syntax");
                    let mut  parser = parser::Parser::new(grammar, tokens);
                    next = parser.parse("top".to_string(), opt.rule, 0);
-                   println!("END PARSING AT::{:#?}", next);
+                   if let Some(parsed) = next {
+                       println!("END PARSING AT::{}", parsed.at);
+                       compiler::compile(
+                           parsed,
+                           opt.output
+                       );
+                   }
                 }
                 Err(e) => {
                     eprintln!("lex failed::{}", e);
