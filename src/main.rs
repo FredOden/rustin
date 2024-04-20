@@ -44,12 +44,18 @@ fn main() {
                    println!("Can check syntax");
                    let mut  parser = parser::Parser::new(grammar, tokens);
                    next = parser.parse("top".to_string(), opt.rule, 0);
+
                    if let Some(parsed) = next {
                        println!("END PARSING AT::{}", parsed.at);
-                       compiler::compile(
+                       if let Err(e) = compiler::compile(
                            parsed,
                            opt.output
-                       );
+                       )
+                       {
+                           eprintln!("compiler::{e}");
+                       }
+                   } else {
+                       eprintln!("Parsing exited with None !!!!");
                    }
                 }
                 Err(e) => {

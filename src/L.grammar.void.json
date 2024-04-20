@@ -10,20 +10,20 @@
 
 		,"atom" : {
 			"@Number":
-			"Number($(0))"
-			, "%" : " Math.PI"
+			"$(0)f64"
+			, "pi__" : "std::f32::consts::PI"
 			, "&variable":
 			"$(0)"
 			, "( &factor )":
 			"$(1)"
-			,"@ &atom":
-			"L.sqrt($(1))"
-			,"&atom @":
-			"$(0)*Math.PI/180"
-			,"&atom %":
-			"$(0)*180/Math.PI"
+			,"sqr__ &atom":
+			"$(1).sqrt()"
+			,"&atom rad__":
+			"$(0)*std::f32::consts::PI/180"
+			,"&atom deg__":
+			"$(0)*180/std::f32::consts::PI"
 			,"Math ( &factorA )":
-			"callMath($(0), $(2))"
+			"($(2)).$(0)()"
 			, "~Identifier &callParams":
 			"{ var call = $(0);  var expr = vars.get(call); var callList = $(1); if (expr.defList === undefined) { throw \"Call::error::\" + call + \" is not a function !\"; } vars = new Scope(vars); expr.defList.forEach((def, i) => { vars.declare(def); vars.set(def, callList[i]?callList[i]:0); }); var r = expr;  vars = vars.getEnclosing; return r; }"
 
@@ -41,7 +41,7 @@
 
 		,"factorL" : {
 			"&factorL OperatorL &factorL":
-			"operate($(1), $(0), $(2))"
+			"$(0) $(1) $(2)"
 			,"&factorB":
 			"$(0)"
 		}
@@ -49,14 +49,14 @@
 
 		,"factorB" : {
 			"&factorB OperatorB &factorB":
-			"operate($(1), $(0), $(2))"
+			"$(0) $(1) $(2)"
 			,"&factorA":
 			"$(0)"
 		}
 
 		,"factorA": {
 			"&factorA OperatorA &factorA":
-			"operate($(1), $(0), $(2))"
+			"$(0) $(1) $(2)"
 
 			,"OperatorA &atom":
 			"operate($(0), 0, $(1))"
@@ -68,24 +68,24 @@
 
 		,"factorM": {
 			"&factorM OperatorM &factorM":
-			"operate($(1), $(0), $(2))"
+			"$(0) $(2) $(2)"
 			,"&atom":
 			"$(0)"
 		}
 
 		,"expr" : {
 			"&variable = &expr":
-			"{ p2 = () => $(2); vars.set($(0), p2()); p.val = p2(); return p2(); }"
+			"let mut $(0) = $(2);"
 			,"&factor ;":
 			"$(0)"
 			,";":
-			""
+			"//Nothing"
 			, "print &atom ;":
-			"{ console.log($(1));return $(1); }"
+			"{ let t__ = $(1); println!(\"{t__}\");$(1) }"
 			, "if &factor then &expr":
-			"{ if ($N($(1))) return $(3); }"
+			" if $(1) { $(3) }"
 			, "if &factor then &expr else &expr":
-			"$N($(1))?$(3):$(5)"
+			"if $(1) {$(3)} else {$(5)}"
 			, "&block":
 			"$(0)"
 			, "for &variable = &factor to &factor &expr":
@@ -128,14 +128,19 @@
 			"&expr":
 			"$(0)"
 			, "&expr &statement":
-			"{ $(0); return $(1); }"
+			"{ $(0);  $(1) }"
 			, "&expr &statement &statement":
-			"{ $(0); $(1); return $(2); }"
+			"{ $(0); $(1); $(2) }"
 		}
 
 		, "block" : {
 			"{ &statement }":
 			"$(1)"
+		}
+
+		, "program" : {
+			"&statement" :
+			"fn main() { $(0); }"
 		}
 
 	}

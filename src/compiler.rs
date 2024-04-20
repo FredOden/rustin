@@ -6,6 +6,7 @@ use std::io::Write;
 
 pub fn compile(root: parser::Parsed, output: PathBuf) -> Result<String, String> {
 
+    println!("compiling");
     let mut sout:String = String::new();
     sout.push_str(root.val.as_str());
 
@@ -23,7 +24,7 @@ pub fn compile(root: parser::Parsed, output: PathBuf) -> Result<String, String> 
         }
     }
     
-    Err(format!("not implemented"))
+    Ok(format!("compilation done."))
 }
 
 
@@ -34,6 +35,6 @@ fn eval(val:&mut String, p__:Vec<parser::Parsed>) {
         eval(&mut v, p.p__);
         let pattern = format!("$({i})");
         *val = val.replace(pattern.as_str(), v.as_str());
-        val.push('\n');
     };
+    //val.push('\n');
 }

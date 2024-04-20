@@ -279,7 +279,7 @@ impl Parser {
                     // store p_code for simpke token
                     if i_element == count - 1 {
                         let val = self.grammar.rules.get(&name).unwrap().get(try_rule).unwrap().to_string();//"###val###".to_string();
-                        //println!("{}::@@@@ Matched {try_rule} {i_element} & at {} ==> {val}", self.depth(), at + i_element );
+                        println!("{}::@@@@ Matched {try_rule} {i_element} & at {} ==> {val}", self.depth(), at + i_element );
                         let mut op = Some(Parsed{at, count, p__, val});
                         self.insert_cache(try_rule, at_start, op.clone());
                         self.dec_depth();
