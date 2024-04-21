@@ -1,5 +1,6 @@
 use crate::lex;
 use serde::Deserialize;
+use deser_hjson::*;
 use std::collections::HashMap;
 use std::cmp::Ordering;
 use std::cell::RefCell;
@@ -92,7 +93,7 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(grammar_json: String, tokens: Vec<lex::Token>) -> Parser {
-        let grammar:Grammar = match serde_json::from_str::<Grammar>(&grammar_json) {
+        let grammar:Grammar = match deser_hjson::from_str::<Grammar>(&grammar_json) {
             Ok(g) => g,
             Err(e) => {
                 eprintln!("parse error: {}", e);

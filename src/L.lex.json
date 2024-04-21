@@ -16,7 +16,7 @@
 		,"call": "\\bcall\\b"
 		,"Math": "(\\bcos\\b)|(\\bsin\\b)|(\\btan\\b)|(\\bln\\b)|(\\bexp\\b)"
 		,"OperatorB": "(\\band\\b)|(\\bor\\b)|(\\bxor\\b)"
-		,"OperatorL": "(\\b==\\b)|(\\bne\\b)|(\\bgt\\b)|(\\bge\\b)|(\\blt\\b)|(\\ble\\b)"
+		,"OperatorL": "(\\beq\\b)|(\\bne\\b)|(\\bgt\\b)|(\\bge\\b)|(\\blt\\b)|(\\ble\\b)"
 		,"OperatorA": "(\\+|\\-)"
 		,"OperatorM": "(\\*|\\/|\\^)"
 		,"=": "="

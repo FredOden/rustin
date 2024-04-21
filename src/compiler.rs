@@ -1,6 +1,7 @@
 use crate::parser;
 use std::path::PathBuf;
 use std::io::Write;
+use std::cmp::Ordering; 
 
 
 
@@ -33,8 +34,11 @@ fn eval(val:&mut String, p__:Vec<parser::Parsed>) {
         let p = p__[i].clone();
         let mut v = p.val;
         eval(&mut v, p.p__);
-        let pattern = format!("$({i})");
+        let pattern = format!("${i}");
         *val = val.replace(pattern.as_str(), v.as_str());
+        println!("v<{v}>");
+        if v.cmp(&" ".to_string()) == Ordering::Equal {
+            val.push('\n');
+        }
     };
-    //val.push('\n');
 }
