@@ -186,6 +186,13 @@ impl Parser {
         }
     }
 
+    fn line_col(&self, at:usize) -> String {
+        return format!("line {} col {}",
+            self.tokens[at].line(),
+            self.tokens[at].column()
+        );
+    }
+
     fn set_broken(&self, try_rule : &String, at:usize) {
         self.broken.borrow_mut().insert(
             CacheKey::K(try_rule.clone(), at),
@@ -241,7 +248,16 @@ impl Parser {
                 let mut at = at_start;
                 let mut p__:Vec<Parsed> = Vec::new();
                 'syntax: for i_element in 0..syntax.len() {
-                    let element:String = syntax[i_element].clone();
+                    let mut element:String = syntax[i_element].clone();
+                    let mut mandatory = false;
+                    if element.len() > 7 {
+                        if element[0..7].cmp("!Error!") == Ordering::Equal {
+                        element = element[7..].to_string();
+                        mandatory = true;
+                        println!("{}::!!!! {try_rule}:: mandatory::{mandatory} element::<{element}>", self.depth());
+                        }
+                    }
+
                     if at + i_element >= self.tokens.len() {
                         continue 'rulesLoop;
                     }
@@ -261,12 +277,19 @@ impl Parser {
                                 p__.push(parsed);
                             } else {
                                 self.set_broken(try_rule, at_start);
+                                if mandatory {
+                                    eprintln!("!!!! {name}:: Syntax error at {} {element} expected", self.line_col(at + i_element));
+                                }
                                 break 'syntax;
                             }
                         } else {
                             // here element not matched
                             // process next rule
                             self.set_broken(try_rule, at_start);
+
+                            if mandatory {
+                                eprintln!("!!!! {name}:: Syntax error at {} {element} expected", self.line_col(at + i_element));
+                            }
                             break 'syntax;
                         }
                     } else {
@@ -290,6 +313,7 @@ impl Parser {
                 self.insert_cache(try_rule, at_start, None);
             }
         }
+        //eprintln!("!!!! {name}:: Syntax error at {at_start}");
         self.dec_depth();
         return None;
     }

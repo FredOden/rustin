@@ -1,5 +1,18 @@
-a = cos(1+99);
-print sin(a + 2);
-if a eq 0 then 
-8888 ;
- else 0;
+def by_pi(n) n*π;
+def fact(n) if n lt 2 then 1; else n * fact(n - 1);
+;
+;
+c = cos(88);;
+b = (5 ne 6);
+print b;
+z=if b then {print 8888;} else {print 9999;};;
+;
+print z;
+if z eq 8888 then print √5555;
+;
+g = by_pi(2);
+print g;
+for i = 1 to 3 print by_pi(i);
+;
+for i = 7 to 10 print fact(i);
+;
