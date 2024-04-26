@@ -118,7 +118,7 @@ impl Parser {
             let mut r: Vec<String> = Vec::new();
             for i in v.keys() {
                 r.push((*i).to_string());
-                let mut vat: Vec<usize> = Vec::new();
+                //let mut vat: Vec<usize> = Vec::new();
                 p.forbidden_rules.push(
                     ForbiddenRule::new((*i).to_string())
                 );
@@ -213,8 +213,22 @@ impl Parser {
     pub fn parse(&self, rule: String, name: String, at_start:usize) -> Option<Parsed> {
 
         self.inc_depth();
+        const TERMINAL:&str = "!Terminal:";
+        const EXPECT:&str = "!Expect:";
+
+        let mut terminal = false;
 
         let mut binding = self.keys.get(&name);
+
+        if let None = binding {
+            binding = self.keys.get(&format!("{TERMINAL}{name}"));
+            if let Some(ok) = binding {
+                terminal = true;
+                println!("{}::!!!! {name} is terminal", self.depth());
+            }
+
+        }
+        let mut at = at_start;
         let mut vok = binding.iter_mut();
         'mainLoop: for try_rules in vok {
             'rulesLoop: for try_rule in try_rules.iter() {
@@ -245,17 +259,14 @@ impl Parser {
                 if at_start + count -1 >= self.tokens.len() {
                     continue;
                 }
-                let mut at = at_start;
+                at = at_start;
                 let mut p__:Vec<Parsed> = Vec::new();
                 'syntax: for i_element in 0..syntax.len() {
                     let mut element:String = syntax[i_element].clone();
-                    let mut mandatory = false;
-                    if element.len() > 7 {
-                        if element[0..7].cmp("!Error!") == Ordering::Equal {
-                        element = element[7..].to_string();
-                        mandatory = true;
+                    let mandatory =  element.len() > EXPECT.len() &&  element[0..EXPECT.len()].cmp(EXPECT) == Ordering::Equal;
+                    if mandatory {
+                        element = element[EXPECT.len()..].to_string();
                         println!("{}::!!!! {try_rule}:: mandatory::{mandatory} element::<{element}>", self.depth());
-                        }
                     }
 
                     if at + i_element >= self.tokens.len() {
@@ -302,18 +313,30 @@ impl Parser {
                     }
                     // store p_code for simpke token
                     if i_element == count - 1 {
-                        let val = self.grammar.rules.get(&name).unwrap().get(try_rule).unwrap().to_string();//"###val###".to_string();
+                        let val = if terminal {
+                            self.grammar.rules.get(&format!("{TERMINAL}{name}")).unwrap().get(try_rule).unwrap().to_string()
+                        } else {
+                            self.grammar.rules.get(&name).unwrap().get(try_rule).unwrap().to_string()
+                        };
                         println!("{}::@@@@ Matched {try_rule} {i_element} & at {} ==> {val}", self.depth(), at + i_element );
                         let mut op = Some(Parsed{at, count, p__, val});
                         self.insert_cache(try_rule, at_start, op.clone());
                         self.dec_depth();
                         return op;
                     }
+                    if i_element == count - 1 {
+                        self.dec_depth();
+                        return None
+                    }
                 }
                 self.insert_cache(try_rule, at_start, None);
-            }
+            } // for try_rule in try_rules
+        } // for try_rulea in vok
+        
+         if terminal {
+            eprintln!("{}::!!!! {name}:: Syntax error at {} unexpexted \"{}\"",self.depth(), self.line_col(at), self.tokens[at].string());
         }
-        //eprintln!("!!!! {name}:: Syntax error at {at_start}");
+        
         self.dec_depth();
         return None;
     }
