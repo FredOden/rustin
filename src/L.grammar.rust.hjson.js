@@ -9,7 +9,7 @@
 	}
 
 	,'''
-	!Terminal:atom
+	atom
 	''' : 
 	{
 		"@Number":
@@ -70,7 +70,7 @@
 		"($0 as f64 $1 $2 as f64)"
 
 		,"OperatorA &atom":
-		$0 $1
+		($0 $1)
 		,"&factorM":
 		"$0"
 	}
@@ -85,16 +85,12 @@
 	,"expr" : {
 		"&variable = !Expect:&expr":
 		"let mut $0 = $2"
-		,"&factor ;":
+		,"&factor !Expect:;":
+		"$0"
+		,"&block":
 		"$0"
 		, '''
-		begin &statement !Expect:end
-		''':
-		"{ $1; }"
-		//,";":
-		//""
-		, '''
-		print &atom ;
+		print !Expect:&atom !Expect:;
 		''':
 		'''
 		{
@@ -116,15 +112,17 @@
 			$5
 		}
 		'''
-		, "for &variable = &factor to &factor &expr":
+		, "for !Expect:&variable !Expect:= !Expect:&factor !Expect:to !Expect:&factor &expr":
 		'''
 		for $1 in ($3).round() as i64..=($5).round() as i64 {
 			_ = $6;
 		}
 		'''
-		, "for &variable = &factor to &factor step &factor &expr":
+		, "for !Expect:&variable !Expect:= !Expect:&factor !Expect:to !Expect:&factor step &factor &expr":
 		"{ var v = $1; var step = Number($7); var from = Number($3); var to = Number($5); if (step === 0 { throw \"for::error::step = \" + step; } vars = new Scope(vars); vars.declare(v); if ((step >0?(to <  from):(to > from)) { throw \"for::error::to(\"+to+ ((step>0?\") < from(\":\") > from(\") + from +\")\"; } for(vars.set(v, from); (step>0?(vars.get(v) <= to):(vars.get(v) >= to); vars.set(v, vars.get(v) + step)) { $8; } vars = vars.getEnclosing; return $8; }"
-		,"def ~Identifier &defParams &expr":
+		,'''
+		def !Expect:~Identifier !Expect:&defParams !Expect:&expr
+		''':
 		'''
 		fn $1 $2 -> f64 {
 			$3
@@ -149,7 +147,7 @@
 	, "callParams" : {
 		"( )":
 		"()"
-		,"( &callList )":
+		,"( &callList !Expect:)":
 		"($1)"
 	}
 
@@ -165,8 +163,6 @@
 		"$0"
 		, "&expr &statement":
 		"$0;  $1"
-		, "&expr &statement &statement":
-		"$0; $1; $2"
 	}
 
 	, "block" : {

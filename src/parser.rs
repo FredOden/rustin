@@ -213,6 +213,8 @@ impl Parser {
     pub fn parse(&self, rule: String, name: String, at_start:usize) -> Option<Parsed> {
 
         self.inc_depth();
+
+        println!("{}::in parse {name} at {} :: {}/{}", self.depth(), self.line_col(at_start), self.tokens[at_start].string(), self.tokens[at_start].token());
         const TERMINAL:&str = "!Terminal:";
         const EXPECT:&str = "!Expect:";
 
@@ -233,11 +235,6 @@ impl Parser {
         'mainLoop: for try_rules in vok {
             'rulesLoop: for try_rule in try_rules.iter() {
 
-                if let Some(fr) = self.find_forbidden(try_rule) {
-                    if fr.is_at(at_start) {
-                        continue;
-                    }
-                }
 
                 if self.is_broken(try_rule, at_start) {
                     continue;
@@ -246,6 +243,13 @@ impl Parser {
                 if let Some(s) = self.find_cache(try_rule, at_start) {
                     self.dec_depth();
                     return Some(s);
+                }
+
+                if let Some(fr) = self.find_forbidden(try_rule) {
+                    if fr.is_at(at_start) {
+                        println!("{}:: {try_rule} forbidden at {}", self.depth(), self.line_col(at_start));
+                        continue;
+                    }
                 }
 
                 let s_syntax = try_rule.split(" ");
@@ -276,11 +280,11 @@ impl Parser {
                         if element[0..1].cmp("&") == Ordering::Equal {
                             let sub_rule = &element[1..];
                             if let Some(fr) = self.find_forbidden(try_rule) {
-                                fr.add_at(at + i_element);
+                                fr.add_at(at /* + i_element */);
                             }
                             let mut  opt_parsed = self.parse("".to_string(), sub_rule.to_string(), at + i_element);
                             if let Some(fr) = self.find_forbidden(try_rule) {
-                                fr.remove_at(at + i_element);
+                                fr.remove_at(at /* + i_element */);
                             }
                             if let  Some(parsed) =  opt_parsed {
                                 let at_before = at;
@@ -312,13 +316,14 @@ impl Parser {
                         });
                     }
                     // store p_code for simpke token
+                    println!("{}::@@@@ Partial {try_rule} {i_element} & at {} ==> {}", self.depth(), self.line_col(at + i_element ), self.tokens[at+i_element].string());
                     if i_element == count - 1 {
                         let val = if terminal {
                             self.grammar.rules.get(&format!("{TERMINAL}{name}")).unwrap().get(try_rule).unwrap().to_string()
                         } else {
                             self.grammar.rules.get(&name).unwrap().get(try_rule).unwrap().to_string()
                         };
-                        println!("{}::@@@@ Matched {try_rule} {i_element} & at {} ==> {val}", self.depth(), at + i_element );
+                        println!("{}::@@@@ Matched {try_rule} {i_element} & at {} ==> {val} {}", self.depth(), self.line_col(at + i_element ), self.tokens[at+i_element].string());
                         let mut op = Some(Parsed{at, count, p__, val});
                         self.insert_cache(try_rule, at_start, op.clone());
                         self.dec_depth();
