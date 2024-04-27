@@ -36,7 +36,6 @@ fn eval(val:&mut String, p__:Vec<parser::Parsed>) {
         eval(&mut v, p.p__);
         let pattern = format!("${i}");
         *val = val.replace(pattern.as_str(), v.as_str());
-        println!("v<{v}>");
         if v.cmp(&" ".to_string()) == Ordering::Equal {
             val.push('\n');
         }

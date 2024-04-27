@@ -37,13 +37,13 @@ fn main() {
             let json = fs::read_to_string(opt.lexicon).unwrap();
             let source = fs::read_to_string(opt.source).unwrap();
             let grammar = fs::read_to_string(opt.grammar).unwrap();
-            let mut next:std::option::Option<parser::Parsed>;
+            let next:std::option::Option<parser::Parsed>;
             match lex::lex(json, source) {
                 Ok(tokens) => {
                     if opt.verbose { println!("Lex -> {:#?}", tokens); }
                    println!("Can check syntax");
-                   let mut  parser = parser::Parser::new(grammar, tokens);
-                   next = parser.parse("top".to_string(), opt.rule, 0);
+                   let parser = parser::Parser::new(grammar, tokens);
+                   next = parser.parse(opt.rule, 0);
 
                    if let Some(parsed) = next {
                        println!("END PARSING AT::{}", parsed.at);

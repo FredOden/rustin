@@ -1,7 +1,10 @@
 def norm (x, y, z) √(x*x + y*y +z*z);
 print norm(2+1, 3+1, 1);
 
-def by_pi(n) n*π;
+def by_pi(n) { n*π; }
+
+def uuu() { 1000.68e-3; }
+print uuu();
 
 def fact(n) if n lt 2 then 1; else n * fact(n - 1);
 c[5]= cos(88);

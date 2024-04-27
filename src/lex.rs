@@ -166,7 +166,7 @@ exit
 pub fn lex(json_lexicon: String, text: String) -> Result<Vec<Token>, String> {
     let mut scratch = text.clone();
     let mut tokens:Vec<Token> = Vec::new();
-    match serde_json::from_str::<Lexicon>(&json_lexicon) {
+    match deser_hjson::from_str::<Lexicon>(&json_lexicon) {
         Ok(lexicon) => {
             for (k, tok) in lexicon.tokens {
                 let re = Regex::new(&tok).unwrap();
